@@ -11,11 +11,6 @@
  *         Choose options: getCapwatch, Head, Time-driven, Day timer, Select Time
 **/
 
-// The ID of the folder where you want to add/update data
-//var CAPWATCH_FOLDER_ID = '1zfHfMuqx_jr-ZRaKL7r67wlEXo17V-NB';
-// Orginization ID of the unit for which to download data
-//var ORGID = '223';
-
 /**
  * Gets capwatch data and updates specified Google Drive folder
 **/
