@@ -79,6 +79,7 @@ function getGroupMembers(groupName, attribute, attributeValues, members, squadro
   let groups = {};
   let wingGroupId = 'miwg.' + groupName;
   let values = attributeValues.split(',');
+  let groupId;
   groups[wingGroupId] = {}; 
   switch (attribute) {
     case 'type':
@@ -97,12 +98,37 @@ function getGroupMembers(groupName, attribute, attributeValues, members, squadro
         }
       }
       break;
+    case 'dutyPositionIdsAndLevel':
+      groupId = groupName;
+      if (groupId && !groups[groupId]) {
+        groups[groupId] = {};
+      }
+      for(var member in members) {
+        if (((typeof members[member][attribute] === 'string' && values.indexOf(members[member][attribute]) > -1) || members[member][attribute].indexOf(values[0]) > -1) && members[member].email) {
+          groups[groupId][members[member].email] = 1;
+        }
+      }
+      break;
+    case 'dutyPositionLevel':
+      groupId = groupName;
+      if (groupId && !groups[groupId]) {
+        groups[groupId] = {};
+      }
+      for(var member in members) {
+        for (var i=0; i < members[member].dutyPositions.length; i++) {
+          if (members[member].dutyPositions[i].level === values[0] && members[member].email) {
+            groups[groupId][members[member].email] = 1;
+            break;
+          }
+        }
+      }
+      break;
     case 'acheivements':
       let acheivements = parseFile('MbrAchievements');
       for(var i =0; i < acheivements.length; i++) {
         if (members[acheivements[i][0]] && values.indexOf(acheivements[i][1]) > -1 && ['ACTIVE', 'TRAINING'].indexOf(acheivements[i][2]) > -1) {
           groups[wingGroupId][members[acheivements[i][0]].email] = 1;
-          let groupId = members[acheivements[i][0]].group? (squadrons[members[acheivements[i][0]].orgid].wing.toLowerCase() +squadrons[members[acheivements[i][0]].group].unit + '.' + groupName) : '';
+          groupId = members[acheivements[i][0]].group? (squadrons[members[acheivements[i][0]].orgid].wing.toLowerCase() +squadrons[members[acheivements[i][0]].group].unit + '.' + groupName) : '';
           if (groupId) {
             if (!groups[groupId]) {
               groups[groupId] = {};
@@ -112,14 +138,13 @@ function getGroupMembers(groupName, attribute, attributeValues, members, squadro
         }
       }
       break;
-      
     case 'contact':
       let contacts = parseFile('MbrContact');
       for (var i = 0; i < contacts.length; i++) {
-        if (members[contacts[i][0]] && attributeValues.indexOf(contacts[i][1]) > -1 && contacts[i][6] !== 'TRUE') {
+        if (members[contacts[i][0]] && values.indexOf(contacts[i][1]) > -1 && contacts[i][6] == 'False') {
           let contact =  contacts[i][3].toLowerCase();
           groups[wingGroupId][contact] = 1;
-          let groupId = members[contacts[i][0]].group? (squadrons[members[contacts[i][0]].orgid].wing.toLowerCase() +squadrons[members[contacts[i][0]].group].unit + '.' + groupName) : '';
+          groupId = members[contacts[i][0]].group? (squadrons[members[contacts[i][0]].orgid].wing.toLowerCase() +squadrons[members[contacts[i][0]].group].unit + '.' + groupName) : '';
           if (groupId) {
             if (!groups[groupId]) {
               groups[groupId] = {};
@@ -128,14 +153,14 @@ function getGroupMembers(groupName, attribute, attributeValues, members, squadro
           }
         }
       }
-      break;
+      break;      
     default:
   }
   return groups;
 }
 
 function saveEmailGroups(emailGroups) {
-  let folder = DriveApp.getFolderById(FOLDER_ID),
+  let folder = DriveApp.getFolderById(CAPWATCH_FOLDER_ID),
       files = folder.getFilesByName('EmailGroups.txt');
   if (files.hasNext()) {
     let file = files.next(),
@@ -159,10 +184,11 @@ function saveErrorEmails(errorEmails) {
   let values = emailArray.map(function(email) {
     return [email, emailMap[email]];
   })
-  sheet.getRange('A2:B' + (values.length + 1)).setValues(values);
-  console.log('Saved error emails to spreadsheet \'Error Emails.\'');
+  if (values.length > 0) {
+    sheet.getRange('A2:B' + (values.length + 1)).setValues(values);
+    console.log('Saved error emails to spreadsheet \'Error Emails.\'');
+  }
 }
-
 function getCurrentGroup(groupId) {
   let email = groupId + EMAIL_DOMAIN,
     members = [],
@@ -192,4 +218,52 @@ function getCurrentGroup(groupId) {
     }
   }
   return members;
+}
+
+/**
+ * Adds members to groups as defined in Spreadsheet "Email Groups" sheet "UserAdditions" with specified roles. Does not remove members automatically.
+ */
+function updateAdditionalGroupMembers() {
+  let start = new Date(),
+    additionalMembers = SpreadsheetApp.openById(CONFIG_SPREADSHEET_ID).getSheetByName('User Additions').getDataRange().getValues(),
+    errorEmails = {},
+    roles = ['MEMBER', 'MANAGER', 'OWNER'],
+    added = 0;
+  for(var i=1; i < additionalMembers.length; i++) {
+    let groups = additionalMembers[i][3].split(',');
+    for(var j=0; j < groups.length; j++) {
+      let groupEmail = groups[j].trim() + EMAIL_DOMAIN,
+        email = additionalMembers[i][1];
+        role = additionalMembers[i][2].toLocaleUpperCase();
+      if (roles.indexOf(role) < 0) {
+        //Invalid role defined in spreadsheet, skipping
+        break;
+      }
+      //Add member
+      try {
+        AdminDirectory.Members.insert({
+          email: email,
+          role: role
+        }, groupEmail);
+        console.log('Added ' + email + ' to group ' + groupEmail + ' with role ' + role + '.');
+      } catch (e) {
+        if (e.details.code === 409) {
+          console.log(email + ' already in group ' + groupEmail + '.')
+        } else {
+          console.log('Failed to add member ' + email + ' to ' + groupEmail + ': ', e);
+        }
+        if ([400,404].indexOf(e.details.code) > -1) {
+          errorEmails[email] = additionalMembers[i][3];
+        }
+      }
+    }
+  }
+  console.log('Updated all email groups with ' + added + ' additional members: ' +  (new Date() - start) + 'ms');
+  //Handle Error Emails
+  //saveErrorEmails(errorEmails);
+}
+
+function testSaveErrorEmails() {
+  let errorEmails = {'bob.rodenhouse@gmail.com':404, 'mi190.sdavis@live.com':404,'michael-shoemaker@sbcglobal.net':404};
+  saveErrorEmails(errorEmails);
 }
