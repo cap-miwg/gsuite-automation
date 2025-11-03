@@ -339,7 +339,7 @@ previewLicenseLifecycle();
 
 ### Core Modules
 
-- **[Accounts & Groups](src/accounts-and-email-groups/README.md)** - Member and group management
+- **[Accounts & Groups](src/accounts-and-groups/README.md)** - Member and group management
   - Member synchronization
   - Email group automation
   - License lifecycle management
