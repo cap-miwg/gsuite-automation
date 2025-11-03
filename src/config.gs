@@ -215,7 +215,7 @@ const LICENSE_CONFIG = {
    * If more users need processing, they'll be handled in the next run.
    * Set to a reasonable limit based on your user volume and script timeout.
    */
-  MAX_BATCH_SIZE: 500,
+  MAX_BATCH_SIZE: 100,
   
 };
 
