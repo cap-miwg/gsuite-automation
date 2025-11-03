@@ -399,7 +399,7 @@ See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed guidelines.
 
 ## Versioning
 
-We use [Semantic Versioning](http://semver.org/) for releases. For available versions, see the [tags on this repository](https://github.com/yourusername/capwatch-automation/tags).
+We use [Semantic Versioning](http://semver.org/) for releases. For available versions, see the [tags on this repository](https://github.com/cap-miwg/gsuite-automation/tags).
 
 **Current Version**: 2.0.0 (December 2024)
 
@@ -424,7 +424,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Getting Help
 
 - **Documentation**: Start with this README and linked guides
-- **Issues**: [Submit an issue](https://github.com/yourusername/capwatch-automation/issues) on GitHub
+- **Issues**: [Submit an issue](https://github.com/cap-miwg/gsuite-automation/issues) on GitHub
 - **Questions**: Open a discussion in the repository
 - **Email**: Contact your wing IT team
 
