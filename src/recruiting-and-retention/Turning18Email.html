@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Rajdhani:700|Ubuntu:400,700" rel="stylesheet" type="text/css">
+  <style>
+    body {
+      font-family: "Ubuntu", sans-serif;
+      line-height: 1.6;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+      background-color: #ececec;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background-color: #001871;
+      color: #ffffff;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: "Rajdhani", sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 10px 0;
+      letter-spacing: 1px;
+    }
+    .header .birthday {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 22px;
+      color: #ffcd00;
+      margin: 0;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .content p {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+    }
+    .greeting {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background-color: #ccd1e3;
+      border-left: 4px solid #001871;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .info-box strong {
+      color: #001871;
+      font-size: 17px;
+    }
+    .warning-box {
+      background-color: #f1ced5;
+      border-left: 4px solid #ba0c2f;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .warning-box strong {
+      color: #ba0c2f;
+    }
+    .section-header {
+      font-family: "Rajdhani", sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: #001871;
+      margin: 25px 0 15px 0;
+      letter-spacing: 0.5px;
+    }
+    .option-box {
+      background-color: #ffffff;
+      border: 2px solid #9ea2a2;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .option-box h3 {
+      font-family: "Rajdhani", sans-serif;
+      font-weight: 700;
+      color: #001871;
+      margin: 0 0 10px 0;
+      font-size: 18px;
+    }
+    .resource-link {
+      color: #001871;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+    .signature {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #9ea2a2;
+    }
+    .signature p {
+      margin: 5px 0;
+    }
+    .footer {
+      background-color: #001871;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+    @media only screen and (max-width: 600px) {
+      .header h1 {
+        font-size: 24px;
+      }
+      .header .birthday {
+        font-size: 20px;
+      }
+      .content {
+        padding: 20px 15px;
+      }
+      .section-header {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>CIVIL AIR PATROL<br>MICHIGAN WING</h1>
+      <p class="birthday">Happy Birthday!</p>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear {{rank}} {{lastName}},</p>
+      
+      <p><strong>Congrats on turning 18!</strong> This is another turning point in your CAP career where you can choose to continue as a cadet or turn over to the Senior side as a Flight Officer. We understand that this can be a confusing time and hope to shed some light on what it is to stay as a Cadet or become a Senior Member as there are benefits to both.</p>
+      
+      <div class="warning-box">
+        <strong>What you now need to take every year since turning 18</strong> (can be taken after you turn 17):<br><br>
+        <strong>Cadet Protection Basic</strong> must be completed in Absorb prior to turning 18.<br><br>
+        CAPR 60-2 Ch.3 States: "Cadets who do not complete the training before their 18th birthday, or who fail to refresh their training every 12 months after their 18th birthday are ineligible to participate in CAP activities, Cadet Wings, NCSAs, and prohibited from promoting, until completion of the course."
+      </div>
+      
+      <h2 class="section-header">A DECISION MUST BE MADE:</h2>
+      
+      <div class="option-box">
+        <h3>Option 1: Become a Flight Officer (Senior Member not yet 21)</h3>
+        <p>You are now no longer a cadet and can start working on your ratings as a senior member. Promotion and requirements are very different from being a cadet (See chart). There are more freedoms compared to being a cadet but now you have to enforce Cadet to Senior Member ratios for activities. Friendships with individuals that are still cadets can be trickier to navigate.</p>
+        <p>Check out <a href="https://www.gocivilairpatrol.com/media/cms/P_4008_A9E28CE5A54F9.pdf" class="resource-link">CAPP 40-8</a> for more information on the Cadet to Senior Transition.</p>
+      </div>
+      
+      <div class="info-box" style="text-align: center; font-size: 20px; font-family: 'Rajdhani', sans-serif;">
+        <strong>OR</strong>
+      </div>
+      
+      <div class="option-box">
+        <h3>Option 2: Stay a Cadet for 3 more years</h3>
+        <p>This decision is totally up to you and if you want more out of the Cadet Program another few years. You can always go to more NCSA's, encampments across the country, assist your next generation of cadet leadership, or pave your way to Spaatz if you haven't already done so.</p>
+      </div>
+      
+      <p>If you know anyone else in the squadron that has turned 18 recently, they, and your Squadron Commander are a great resource. Please don't hesitate to reach out with any questions you may have. We wish you the best of luck on your future endeavors in CAP!</p>
+      
+      <div class="signature">
+        <p><strong>Sincerely,</strong></p>
+        <p><strong>Nea Barkell</strong><br>
+        <p><strong>Director of Recruiting & Retention</strong><br>
+        Michigan Wing Civil Air Patrol</p>
+      </div>
+    </div>
+    <div class="footer">
+      Civil Air Patrol • Michigan Wing<br>
+      Questions? Reply to this email
+    </div>
+  </div>
+</body>
+</html>

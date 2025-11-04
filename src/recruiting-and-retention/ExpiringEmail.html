@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Rajdhani:700|Ubuntu:400,700" rel="stylesheet" type="text/css">
+  <style>
+    body {
+      font-family: "Ubuntu", sans-serif;
+      line-height: 1.6;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+      background-color: #ececec;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background-color: #001871;
+      color: #ffffff;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: "Rajdhani", sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0;
+      letter-spacing: 1px;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .content p {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+    }
+    .greeting {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .important-box {
+      background-color: #fff5cc;
+      border-left: 4px solid #ffcd00;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .important-box strong {
+      color: #001871;
+    }
+    .button-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .button {
+      display: inline-block;
+      background-color: #ba0c2f;
+      color: #ffffff;
+      padding: 15px 35px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 16px;
+      font-family: "Rajdhani", sans-serif;
+      letter-spacing: 0.5px;
+    }
+    .survey-link {
+      background-color: #ccd1e3;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      word-wrap: break-word;
+      font-size: 14px;
+    }
+    .survey-link a {
+      color: #001871;
+      word-break: break-all;
+    }
+    .signature {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #9ea2a2;
+    }
+    .signature p {
+      margin: 5px 0;
+    }
+    .footer {
+      background-color: #001871;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+    @media only screen and (max-width: 600px) {
+      .header h1 {
+        font-size: 24px;
+      }
+      .content {
+        padding: 20px 15px;
+      }
+      .button {
+        padding: 12px 25px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>CIVIL AIR PATROL<br>MICHIGAN WING</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear {{rank}} {{lastName}},</p>
+      
+      <p>Thank you for your service to Michigan Wing this past year. We are reaching out to you regarding the renewal of your Civil Air Patrol membership as there is less than a month left for you to do so.</p>
+      
+      <div class="important-box">
+        <strong>Membership Expiration:</strong> {{expiration}}
+      </div>
+      
+      <p>If you choose to renew, the command staff of MIWG thanks you for your continued dedication to this organization and wing! Please take a moment of your time to provide us with <strong>feedback</strong> on the past year and anything that would have made your experience better as a volunteer.</p>
+      
+      <div class="button-container">
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLScgerxi1ERQZLQPz9gJPru3r5eaULpySSsBB55N8e6NiUxDiw/viewform?usp=header" class="button">PROVIDE FEEDBACK</a>
+      </div>
+      
+      <p>We understand that CAP takes a lot of time and effort. If you choose not to renew, we hope that your time in MIWG was positive. We appreciate your input and hope to hear back. Have a wonderful day!</p>
+      
+      <div class="survey-link">
+        <strong>If you cannot access the survey link, please copy and paste the following into your search browser:</strong><br>
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLScgerxi1ERQZLQPz9gJPru3r5eaULpySSsBB55N8e6NiUxDiw/viewform?usp=header">https://docs.google.com/forms/d/e/1FAIpQLScgerxi1ERQZLQPz9gJPru3r5eaULpySSsBB55N8e6NiUxDiw/viewform?usp=header</a>
+      </div>
+      
+      <div class="signature">
+        <p><strong>Sincerely,</strong></p>
+        <p><strong>Nea Barkell</strong><br>
+        <p><strong>Director of Recruiting & Retention</strong><br>
+        Michigan Wing Civil Air Patrol</p>
+      </div>
+    </div>
+    <div class="footer">
+      Civil Air Patrol • Michigan Wing<br>
+      Questions? Reply to this email
+    </div>
+  </div>
+</body>
+</html>

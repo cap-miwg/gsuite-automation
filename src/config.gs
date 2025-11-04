@@ -166,6 +166,38 @@ const TEST_EMAIL = '<email for testing notifications here>';
 /** IT support mailbox for notifications */
 const ITSUPPORT_EMAIL = '<it support email here>'
 
+/**
+ * Configuration for retention email system
+ * Centralized constants for email subjects and thresholds
+ */
+const RETENTION_CONFIG = {
+  /**
+   * Email subject lines
+   */
+  SUBJECTS: {
+    TURNING_18: 'Important Membership Update - Turning 18',
+    TURNING_21: 'Important Membership Update - Turning 21',
+    EXPIRING: 'Your CAP Membership Expires Soon'
+  },
+  
+  /**
+   * Age thresholds for email triggers
+   */
+  AGE_THRESHOLDS: {
+    TRANSITION_TO_SENIOR: 18,
+    CADET_AGE_OUT: 21
+  },
+  
+  /**
+   * Email rate limiting (milliseconds between sends)
+   */
+  EMAIL_DELAY_MS: 100,
+  
+  /**
+   * Progress logging frequency (log every N emails)
+   */
+  PROGRESS_LOG_INTERVAL: 10
+};
 
 // ============================================================================
 // LICENSE MANAGEMENT
