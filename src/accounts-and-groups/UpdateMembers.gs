@@ -33,6 +33,7 @@ function getSquadrons() {
       squadrons[squadronData[i][0]] = {
         orgid: squadronData[i][0],
         name: squadronData[i][5],
+        type: squadronData[i][6],
         charter: Utilities.formatString("%s-%s-%03d", squadronData[i][1], squadronData[i][2], squadronData[i][3]),
         unit: squadronData[i][3],
         nextLevel: squadronData[i][4],
