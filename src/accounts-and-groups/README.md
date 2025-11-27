@@ -8,22 +8,34 @@ This module handles the core automation for synchronizing CAPWATCH member data w
 
 - [Overview](#overview)
 - [Components](#components)
+- [Architecture](#architecture)
 - [How It Works](#how-it-works)
 - [Configuration](#configuration)
+- [Installation & Setup](#installation--setup)
 - [Running the Automation](#running-the-automation)
-- [Understanding the Data Flow](#understanding-the-data-flow)
 - [Customization](#customization)
 - [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-This module consists of three main components:
+This module consists of three main components that work together to synchronize CAPWATCH membership data with your Google Workspace environment:
 
 1. **UpdateMembers.gs** - User account lifecycle management
 2. **UpdateGroups.gs** - Email group membership synchronization
 3. **ManageLicenses.gs** - License optimization and account archival
 
 Together, these scripts ensure that your Google Workspace environment stays synchronized with CAPWATCH membership data automatically.
+
+### What This Module Does
+
+- Creates and updates Google Workspace accounts for all active members
+- Manages email aliases (firstname.lastname@domain)
+- Maintains email distribution groups based on member attributes
+- Suspends accounts for expired members (7-day grace period)
+- Reactivates accounts for renewed members
+- Archives long-suspended accounts to free licenses
+- Deletes accounts inactive for 5+ years
+- Tracks errors and problematic email addresses
 
 ## Components
 
@@ -42,40 +54,11 @@ Together, these scripts ensure that your Google Workspace environment stays sync
 1. Reads CAPWATCH data from Drive (downloaded by GetCapwatch.gs)
 2. Compares with previously saved data to detect changes
 3. Updates only changed member accounts (efficient)
-4. Creates new accounts:
-   - Username: CAPID (e.g., 123456@miwg.cap.gov)
-   - Alias: firstname.lastname@miwg.cap.gov
-5. Suspends members who haven't renewed after 7-day grace period
+4. Creates new accounts with CAPID username and name alias
+5. Suspends members who haven't renewed after grace period
 6. Reactivates members who renewed (including archived members)
 7. Updates custom schema fields (rank, organization, duty positions)
-8. Sets recovery email to member's primary contact from eServices
-
-**Account Creation**:
-```
-New Member in CAPWATCH
-    ↓
-Create Google Account: 123456@miwg.cap.gov (CAPID as username)
-    ↓
-Add Alias: firstname.lastname@miwg.cap.gov
-    ↓
-Set Organization Unit: /MI-001/MI-700/MI-101 (Wing/Group/Squadron)
-    ↓
-Set Custom Fields: Rank, Charter, Positions
-    ↓
-Set Recovery Email: member's primary contact from eServices
-```
-
-**Suspension Logic**:
-```
-Member Expires in CAPWATCH (not in active files)
-    ↓
-Grace Period (7 days - CONFIG.SUSPENSION_GRACE_DAYS)
-    ↓
-Account Suspended (keeps license)
-    ↓
-If Renewed: Unsuspend + Update
-If Not Renewed for 1 year: Archive (see ManageLicenses)
-```
+8. Sets recovery email to member's primary contact
 
 ### 2. UpdateGroups.gs - Email Group Automation
 
@@ -98,51 +81,18 @@ If Not Renewed for 1 year: Archive (see ManageLicenses)
 **Group Types Created**:
 
 **Wing-Level Groups** (entire wing):
-- `miwg.cadets @<domain>` - All cadets
-- `miwg.seniors @<domain>` - All senior members
-- `miwg.commanders @<domain>` - All commanders
-- `miwg.operations @<domain>` - All DOs (Duty Position ID filter)
-- `miwg.logistics @<domain>` - All logistics officers
-- `miwg.logistics.supply @<domain>` - All supply officers (sub-function)
+- `miwg.cadets@domain` - All cadets
+- `miwg.seniors@domain` - All senior members
+- `miwg.commanders@domain` - All commanders
+- `miwg.operations@domain` - All operations officers
+- `miwg.logistics@domain` - All logistics officers
 
 **Group-Level Groups** (per group within wing):
-- `mi700.cadets @<domain>` - Group 700 cadets
-- `mi700.seniors @<domain>` - Group 700 seniors
-- `mi705.commanders @<domain>` - Group 705 commanders
-- `mi705.logistics.supply @<domain>` - Group 705 supply officers
+- `mi700.cadets@domain` - Group 700 cadets
+- `mi700.seniors@domain` - Group 700 seniors
+- `mi705.commanders@domain` - Group 705 commanders
 
-**Important**: Squadron-level groups are NOT automatically created due to Google Apps Script runtime limits. Creating groups for every squadron would exceed the maximum execution time. Only wing-level and group-level distribution lists are automated.
-
-**Email Naming Convention**:
-```
-[org-unit].[function].[sub-function]@domain
-
-Examples:
-- miwg.logistics @<domain> (wing-level, logistics function)
-- miwg.logistics.supply @<domain> (wing-level, supply sub-function)
-- mi705.logistics @<domain> (group-level, logistics function)
-- mi705.logistics.supply @<domain> (group-level, supply sub-function)
-```
-
-**Attribute-Based Groups**:
-You can create groups based on any member attribute:
-- Member Type (CADET, SENIOR, AEM, etc.)
-- Rank (Capt, Maj, Col, etc.)
-- Duty Position IDs (DO, CC, CP, etc.)
-- Duty Position Level (Squadron, Group, Wing)
-- Achievements (Master, Senior, etc.)
-- Contact Type (Emergency, Parent/Guardian)
-
-**Group Configuration Example**:
-
-| Category | Group Name | Attribute | Values |
-|----------|-----------|-----------|--------|
-| member-type | cadets | type | CADET |
-| member-type | seniors | type | SENIOR |
-| duty-position | commanders | dutyPositionIds | CC |
-| duty-position | dos | dutyPositionIds | DO |
-| achievement | solo-pilots | achievements | SOLO |
-| contact | parents | contact | PRIMARY_CONTACT,EMERGENCY_CONTACT |
+**Important**: Squadron-level groups are managed by the [Squadron Groups module](../squadron-groups/README.md) due to the large number of groups and runtime constraints.
 
 ### 3. ManageLicenses.gs - License Lifecycle Management
 
@@ -159,75 +109,154 @@ You can create groups based on any member attribute:
 1. **Archive Phase** (1+ year suspended):
    - Finds members suspended over 1 year
    - Checks if active in CAPWATCH
-   - If not active: Archives account (frees standard license)
+   - Archives account (frees standard license)
    - Sends detailed report
 
 2. **Delete Phase** (5+ years archived):
    - Finds members archived over 5 years
    - Checks if active in CAPWATCH
-   - If not active: Permanently deletes account
+   - Permanently deletes account
    - Sends detailed report
 
 3. **Reactivation**:
-   - Automatically reactivates members who renewed after suspension/archival
+   - Automatically reactivates members who renewed
    - Unarchives and unsuspends in one step
 
-**Lifecycle Timeline**:
+## Architecture
+
+### Member Account Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active: New Member<br/>Create Account
+    Active --> Expired: Membership Expires
+    Expired --> Active: Renewed Within<br/>Grace Period
+    Expired --> Suspended: 7 Days<br/>No Renewal
+    Suspended --> Active: Member Renews<br/>(Unsuspend & Update)
+    Suspended --> Archived: 365 Days<br/>Still Suspended
+    Archived --> Active: Member Renews<br/>(Unarchive & Reactivate)
+    Archived --> Deleted: 1825 Days<br/>(5 Years)
+    Deleted --> [*]
+
+    note right of Active
+        - Account Created
+        - Alias Added
+        - Custom Fields Set
+        - Email Groups Added
+    end note
+
+    note right of Suspended
+        - Keeps License
+        - Account Disabled
+        - Can Be Reactivated
+    end note
+
+    note right of Archived
+        - Frees License
+        - Account Preserved
+        - Can Be Restored
+    end note
 ```
-Active Member
-    ↓
-Membership Expires
-    ↓
-7 Day Grace Period (CONFIG.SUSPENSION_GRACE_DAYS)
-    ↓
-SUSPENDED (keeps license)
-    ↓
-365 Days Suspended (LICENSE_CONFIG.DAYS_BEFORE_ARCHIVE)
-    ↓
-ARCHIVED (frees license → archived user license pool)
-    ↓
-1825 Days Archived (LICENSE_CONFIG.DAYS_BEFORE_DELETE)
-    ↓
-DELETED (permanent removal)
+
+### Daily Automation Flow
+
+```mermaid
+flowchart TD
+    A[CAPWATCH Data Download<br/>4:00 AM] --> B[Parse Member Files<br/>Member.txt, MbrContact.txt, etc.]
+
+    B --> C{Detect Changes}
+
+    C -->|Changes Found| D[Build Member Objects]
+    C -->|No Changes| E[Skip Update]
+
+    D --> F[Update Changed Members]
+
+    F --> G[Create New Accounts]
+    F --> H[Update Existing Accounts]
+    F --> I[Update Custom Fields]
+
+    G --> J[Add Email Alias]
+    H --> J
+    I --> J
+
+    J --> K[Suspend Expired Members<br/>7-Day Grace Period]
+
+    K --> L[Build Email Group<br/>Membership Lists]
+
+    L --> M[Calculate Deltas<br/>Add/Remove Members]
+
+    M --> N[Update Google Groups]
+
+    N --> O[Add Manual Members<br/>From Spreadsheet]
+
+    O --> P[Fix Missing Aliases]
+
+    P --> Q[Log Errors<br/>Track Issues]
+
+    style A fill:#003366,color:#fff
+    style F fill:#4285F4,color:#fff
+    style N fill:#34A853,color:#fff
+    style Q fill:#EA4335,color:#fff
 ```
 
-**Safety Features**:
-- Preview mode to see what would change
-- Maximum batch size limits (default: 100)
-- Active member checks before deletion
-- Detailed email reports
-- Comprehensive logging
-
-## How It Works
-
-### Daily Member Sync Flow
+### Email Group Organization
 
 ```mermaid
 graph TD
-    A[CAPWATCH Data Download] -->|4:00 AM| B[Parse Member Files]
-    B --> C{Changes Detected?}
-    C -->|Yes| D[Update Changed Members]
-    C -->|No| E[Skip Updates]
-    D --> F[Create/Update Accounts]
-    F --> G[Suspend Expired Members]
-    G --> H[Update Email Groups]
-    H --> I[Send Error Reports]
+    A[Email Groups] --> B[Wing-Level Groups]
+    A --> C[Group-Level Groups]
+
+    B --> D[Member Type<br/>cadets, seniors, aem]
+    B --> E[Duty Positions<br/>commanders, dos, logistics]
+    B --> F[Achievements<br/>solo, master-rated]
+    B --> G[Contacts<br/>parents, guardians]
+
+    C --> H[Group 700<br/>mi700.cadets<br/>mi700.seniors]
+    C --> I[Group 701<br/>mi701.commanders<br/>mi701.logistics]
+    C --> J[Group 705<br/>mi705.cadets<br/>mi705.seniors]
+
+    style A fill:#003366,color:#fff
+    style B fill:#4285F4,color:#fff
+    style C fill:#34A853,color:#fff
 ```
+
+### License Lifecycle Timeline
+
+```mermaid
+timeline
+    title Member Account Lifecycle
+    Day 0 : Membership Expires
+          : Account Active
+    Day 7 : Grace Period Ends
+          : Account SUSPENDED
+    Day 365 : 1 Year Suspended
+            : Account ARCHIVED
+            : License Freed
+    Day 1825 : 5 Years Archived
+             : Account DELETED
+             : Permanent Removal
+```
+
+## How It Works
 
 ### Member Data Processing
 
+The module processes CAPWATCH data through several stages:
+
+**Stage 1: Parse CAPWATCH Files**
 ```javascript
-// 1. Parse CAPWATCH files
 getMembers() {
   - Parse Member.txt (basic info)
   - Parse MbrContact.txt (email addresses)
-  - Parse DutyPosition.txt (duty positions)
+  - Parse DutyPosition.txt (senior duty positions)
   - Parse CadetDutyPositions.txt (cadet positions)
   - Validate all data
   - Return structured member objects
 }
+```
 
-// 2. Detect changes
+**Stage 2: Detect Changes**
+```javascript
 memberUpdated(newMember, previousMember) {
   - Compare rank
   - Compare charter
@@ -236,8 +265,10 @@ memberUpdated(newMember, previousMember) {
   - Compare email
   - Return true if any changed
 }
+```
 
-// 3. Update account
+**Stage 3: Update Account**
+```javascript
 addOrUpdateUser(member) {
   - Try to update existing account
   - If not found, create new account
@@ -250,8 +281,8 @@ addOrUpdateUser(member) {
 
 ### Group Membership Calculation
 
+**Step 1: Read Configuration**
 ```javascript
-// 1. Read configuration
 getEmailGroupDeltas() {
   - Read Groups sheet from spreadsheet
   - For each group configuration:
@@ -260,17 +291,21 @@ getEmailGroupDeltas() {
     - Calculate delta (add/remove)
   - Return delta object
 }
+```
 
-// 2. Build membership
+**Step 2: Build Membership**
+```javascript
 getGroupMembers(groupName, attribute, values) {
   - Filter members by attribute
   - Match against specified values
   - Create wing-level group
-  - Create squadron-level groups
+  - Create group-level groups
   - Return member email lists
 }
+```
 
-// 3. Apply changes
+**Step 3: Apply Changes**
+```javascript
 updateEmailGroups() {
   - For each group:
     - Add new members
@@ -301,14 +336,21 @@ Defines which email groups to create and maintain.
 Category        | Group Name    | Attribute           | Values
 member-type     | cadets        | type                | CADET
 member-type     | seniors       | type                | SENIOR
-member-type     | aem           | type                | AEM
 duty-position   | commanders    | dutyPositionIds     | CC
 duty-position   | dos           | dutyPositionIds     | DO
-duty-position   | ops-officers  | dutyPositionIds     | DO,ADO
 achievement     | master-rated  | achievements        | MASTER
 rank            | captains      | rank                | Capt
 contact         | parents       | contact             | PRIMARY_CONTACT
 ```
+
+**Supported Attributes**:
+- `type` - Member type (CADET, SENIOR, AEM)
+- `rank` - Member rank
+- `dutyPositionIds` - Duty position codes
+- `dutyPositionIdsAndLevel` - Position + level combination
+- `dutyPositionLevel` - Position level only
+- `achievements` - Member achievements
+- `contact` - Contact types (for parent/guardian emails)
 
 #### 2. User Additions Sheet
 
@@ -321,16 +363,16 @@ Allows manual additions to groups (non-CAPWATCH members or special roles).
 - **Groups** (D): Comma-separated group names (without domain)
 
 **Use Cases**:
-- **Region-level members** who live in your state and want to receive wing communications
-- **Support personnel** helping with specific duty positions who want to monitor/assist
-- **External partners** who need access to specific distribution lists
-- **Non-CAPWATCH accounts** that should be in certain groups
+- Region-level members who live in your state
+- Support personnel helping with specific duty positions
+- External partners who need access to distribution lists
+- Non-CAPWATCH accounts that should be in certain groups
 
 **Example Rows**:
 ```
 Name              | Email                  | Role    | Groups
 John Doe (Region) | john.doe@cap.gov       | MEMBER  | miwg.staff,miwg.seniors
-Deputy Commander  | cc@miwg.cap.gov        | MEMBER  | miwg.commanders,mi700.commanders
+Deputy Commander  | cc@miwg.cap.gov        | MEMBER  | miwg.commanders
 External Partner  | partner@agency.gov     | MEMBER  | miwg.emergency-services
 ```
 
@@ -338,7 +380,7 @@ External Partner  | partner@agency.gov     | MEMBER  | miwg.emergency-services
 
 Auto-populated by the scripts when errors occur. Review this periodically.
 
-**Columns** (created automatically):
+**Auto-Created Columns**:
 - Email address
 - CAPID (if known)
 - Error count
@@ -364,16 +406,10 @@ ORGID,OrgUnitPath
 - **ORGID**: Organization ID from CAPWATCH Organization.txt file
 - **OrgUnitPath**: Organizational Unit path from Google Workspace Admin Console
   - Wing HQ: `/MI-001`
-  - Group: `/MI-001/MI-700` (Group 700)
-  - Squadron: `/MI-001/MI-700/MI-101` (Squadron 101 in Group 700)
+  - Group: `/MI-001/MI-700`
+  - Squadron: `/MI-001/MI-700/MI-101`
 
 **Structure**: Wing → Group → Squadron hierarchy
-- `/` = Root of Google Workspace (miwg.cap.gov)
-- `/MI-001` = Wing organizational unit
-- `/MI-001/MI-700` = Group 700 under Wing
-- `/MI-001/MI-700/MI-100` = Squadron 100 under Group 700
-
-**Note**: See `/examples/OrgPaths-Example.txt` for a complete working example.
 
 ### config.gs Settings
 
@@ -398,6 +434,52 @@ LICENSE_CONFIG: {
 }
 ```
 
+## Installation & Setup
+
+### Step 1: Enable Required APIs
+
+Ensure these APIs are enabled in your Google Apps Script project:
+- Admin SDK Directory API
+- Google Groups API
+
+### Step 2: Create Spreadsheet
+
+1. Create a new Google Spreadsheet
+2. Name it "CAPWATCH Automation Config"
+3. Create three sheets: `Groups`, `User Additions`, `Error Emails`
+4. Add header rows to each sheet
+5. Note the spreadsheet ID from the URL
+6. Update `AUTOMATION_SPREADSHEET_ID` in config.gs
+
+### Step 3: Create OrgPaths.txt
+
+1. Create a CSV file in your CAPWATCH Data folder
+2. Map each CAPWATCH org ID to its Google Workspace OU path
+3. Include wing, group, and squadron mappings
+4. See example in `/examples` directory
+
+### Step 4: Configure Groups
+
+1. Open the automation spreadsheet
+2. Go to the `Groups` sheet
+3. Add rows for each email group you want to create
+4. Use the examples above as a template
+
+### Step 5: Test the Setup
+
+Run test functions to verify configuration:
+
+```javascript
+// Test member retrieval
+testGetMember();
+
+// Test group configuration
+testGetGroupMembers();
+
+// Test single user update
+testaddOrUpdateUser();
+```
+
 ## Running the Automation
 
 ### Automated Schedule (Recommended)
@@ -406,12 +488,11 @@ Set up these time-based triggers in Google Apps Script:
 
 | Time | Function | Frequency | Purpose |
 |------|----------|-----------|---------|
-| 4:00 AM | `getCapwatch()` | Daily | Download CAPWATCH data |
 | 5:00 AM | `updateAllMembers()` | Daily | Update member accounts |
 | 5:00 AM | `suspendExpiredMembers()` | Daily | Suspend expired accounts |
 | 5:00 AM | `updateEmailGroups()` | Daily | Update group memberships |
-| 6:00 AM | `updateAdditionalGroupMembers()` | Daily | Update additional group memberships from spreadsheet |
-| 6:00 AM | `updateMissingAliases()` | Daily | Update missing email eliases |
+| 6:00 AM | `updateAdditionalGroupMembers()` | Daily | Add manual members |
+| 6:00 AM | `updateMissingAliases()` | Daily | Fix missing aliases |
 | 4:00 AM (15th) | `manageLicenseLifecycle()` | Monthly | Archive/delete old accounts |
 
 ### Manual Execution
@@ -419,9 +500,6 @@ Set up these time-based triggers in Google Apps Script:
 Run functions manually from the Script Editor:
 
 ```javascript
-// Test with a single member
-testaddOrUpdateUser();
-
 // Update all members (full sync)
 updateAllMembers();
 
@@ -445,22 +523,20 @@ manageLicenseLifecycle();
 
 **Safe Testing Workflow**:
 
-1. **Test with preview functions** (no changes):
+1. **Test with preview functions**:
    ```javascript
    previewLicenseLifecycle();
    ```
 
 2. **Test with a single member**:
    ```javascript
-   // Edit testaddOrUpdateUser() to use your test member
    testaddOrUpdateUser();
    ```
 
 3. **Reduce batch size for testing**:
    ```javascript
    // In config.gs
-   BATCH_SIZE: 5,
-   MAX_BATCH_SIZE: 10
+   BATCH_SIZE: 5
    ```
 
 4. **Monitor execution logs**:
@@ -478,103 +554,6 @@ manageLicenseLifecycle();
    updateEmailGroups();
    ```
 
-## Understanding the Data Flow
-
-### Member Data Sources
-
-The automation pulls data from multiple CAPWATCH files:
-
-```
-Member.txt
-├── CAPID, Name, Rank, Type, Status
-├── Joined Date, Expiration Date
-└── Organization ID
-
-MbrContact.txt
-├── Email addresses (PRIMARY)
-├── Phone numbers
-└── Emergency contacts
-
-DutyPosition.txt (Senior Members)
-├── Duty Position ID (CC, DO, etc.)
-├── Position Level (Squadron, Group, Wing)
-├── Assistant/Primary flag
-└── Organization assignment
-
-CadetDutyPositions.txt (Cadets)
-├── Cadet Position ID
-├── Position Level
-└── Organization assignment
-
-MbrAchievements.txt
-├── Achievement Name
-├── Status (ACTIVE/TRAINING)
-└── Completion Date
-
-Organization.txt
-├── Organization ID
-├── Charter Number
-├── Unit Number
-└── Organization Hierarchy
-```
-
-### Custom Schema Fields
-
-Each Google Workspace account stores CAPWATCH data in custom schema:
-
-```javascript
-customSchemas: {
-  MemberData: {
-    CAPID: "123456",
-    Rank: "Capt",
-    Organization: "GLR-MI-100",
-    DutyPosition: [
-      "DO (P) (GLR-MI-100)",
-      "CP (A) (GLR-MI-223)"
-    ],
-    Type: "SENIOR",
-    LastUpdated: "2024-12-15"
-  }
-}
-```
-
-### Organizational Structure
-
-```
-/ (root: miwg.cap.gov)
-└── MI-001 (Wing - Active Members)
-    │
-    ├── MI-700 (Group 700)
-    │   ├── MI-101 (Squadron)
-    │   ├── MI-201 (Squadron)
-    │   └── ...
-    ├── MI-701 (Group 701)
-    │   ├── MI-075 (Squadron)
-    │   ├── MI-165 (Squadron)
-    │   └── ...
-    └── ...
-```
-
-### Email Group Hierarchy
-
-```
-Wing-Level Groups:
-- miwg.all-members <@domain>
-- miwg.cadets <@domain>
-- miwg.seniors <@domain>
-- miwg.commanders <@domain>
-
-Group-Level Groups (auto-created per group):
-- mi700.cadets <@domain>
-- mi700.seniors <@domain>
-- mi705.commanders <@domain>
-
-Special Groups:
-- miwg.parents <@domain> (from contact data)
-```
-
-**Note**: Squadron-level groups are not automatically created due to Google Apps Script runtime limitations.
-
 ## Customization
 
 ### Adding New Group Types
@@ -583,8 +562,8 @@ Want to create groups based on other criteria? Here's how:
 
 1. **Add to Groups spreadsheet**:
    ```
-   Category    | Group Name     | Attribute  | Values
-   custom      | pilots         | achievements | SOLO,PPL
+   Category    | Group Name     | Attribute      | Values
+   custom      | pilots         | achievements   | SOLO,PPL
    ```
 
 2. **If using a new attribute**, add logic in `getGroupMembers()`:
@@ -605,9 +584,9 @@ Want to exclude certain members? Add filtering logic:
 ```javascript
 // In shouldProcessMember()
 function shouldProcessMember(memberRow, types) {
-  return memberRow[24] === 'ACTIVE' && 
-         memberRow[13] != 0 &&  // Not org 000
-         memberRow[13] != 999 &&  // Not org 999
+  return memberRow[24] === 'ACTIVE' &&
+         memberRow[13] != 0 &&
+         memberRow[13] != 999 &&
          types.indexOf(memberRow[21]) > -1 &&
          // Add your custom filter here
          memberRow[someColumn] !== 'EXCLUDE';
@@ -622,32 +601,13 @@ Adjust in `config.gs`:
 const LICENSE_CONFIG = {
   // Suspend → Archive: Change from 1 year to 6 months
   DAYS_BEFORE_ARCHIVE: 180,
-  
+
   // Archive → Delete: Change from 5 years to 7 years
   DAYS_BEFORE_DELETE: 2555,
-  
+
   // Process fewer accounts per run
   MAX_BATCH_SIZE: 100
 };
-```
-
-### Custom Duty Position Formatting
-
-Want to change how duty positions are displayed?
-
-```javascript
-// In addDutyPositions()
-members[dutyPositionData[i][0]].dutyPositions.push({
-  // Change this format string:
-  value: Utilities.formatString("%s (%s) (%s)", 
-    dutyPositionID, 
-    (dutyPositionData[i][4] == '1' ? 'Assistant' : 'Primary'),  // Changed
-    squadrons[dutyPositionData[i][7]].charter
-  ),
-  id: dutyPositionID,
-  level: dutyPositionData[i][3],
-  assistant: dutyPositionData[i][4] == '1'
-});
 ```
 
 ## Troubleshooting
@@ -736,17 +696,15 @@ members[dutyPositionData[i][0]].dutyPositions.push({
 
 **Enable Detailed Logging**:
 ```javascript
-// The Logger object already provides structured logging
 // View logs in: View → Executions
-Logger.info('Debug info', { 
+Logger.info('Debug info', {
   variable: value,
-  details: moreDetails 
+  details: moreDetails
 });
 ```
 
 **Test Single Member**:
 ```javascript
-// Edit function to test specific CAPID
 function testaddOrUpdateUser() {
   let members = getMembers();
   if (members['123456']) {  // Your test CAPID
@@ -757,11 +715,10 @@ function testaddOrUpdateUser() {
 
 **Check Data Files**:
 ```javascript
-// View what's in CAPWATCH files
 function debugFiles() {
   let members = parseFile('Member');
   Logger.info('Member count', { count: members.length });
-  
+
   let contacts = parseFile('MbrContact');
   Logger.info('Contact count', { count: contacts.length });
 }
@@ -769,10 +726,9 @@ function debugFiles() {
 
 **Preview Group Changes**:
 ```javascript
-// See what would change without applying
 function previewGroups() {
   let deltas = getEmailGroupDeltas();
-  
+
   for (const category in deltas) {
     for (const group in deltas[category]) {
       let adds = 0, removes = 0;
@@ -786,27 +742,14 @@ function previewGroups() {
 }
 ```
 
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. Check the main [Troubleshooting Guide](../../docs/TROUBLESHOOTING.md)
-2. Review execution logs in Apps Script
-3. Check Error Emails sheet for patterns
-4. Search [GitHub Issues](https://github.com/yourusername/capwatch-automation/issues)
-5. Open a new issue with:
-   - What you're trying to do
-   - Error messages from logs
-   - Relevant configuration
-   - Steps to reproduce
-
----
-
 ## Additional Resources
 
 - **[Main README](../../README.md)** - Overall project documentation
+- **[Squadron Groups Module](../squadron-groups/README.md)** - Squadron-level group management
+- **[Recruiting & Retention Module](../recruiting-and-retention/README.md)** - Retention workflows
 - **[API Reference](../../docs/API_REFERENCE.md)** - Detailed function documentation
-- **[Utilities Guide](../../docs/UTILITIES.md)** - Shared helper functions
 - **[Development Guide](../../docs/DEVELOPMENT.md)** - Contributing guidelines
+
+---
 
 **Questions?** Open an issue or discussion on GitHub.

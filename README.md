@@ -14,18 +14,19 @@ This project provides a complete automation solution for Civil Air Patrol (CAP) 
 
 - **Automated Account Management**: Creates, updates, and suspends Google Workspace accounts based on member status
 - **Email Group Synchronization**: Maintains email distribution groups based on member attributes (rank, duty positions, achievements, etc.)
+- **Squadron-Level Groups**: Creates and manages squadron-specific groups for unit collaboration
 - **License Optimization**: Automatically archives inactive accounts and manages license allocation
 - **Data Integration**: Daily downloads and processing of CAPWATCH data files
 - **Error Tracking**: Comprehensive logging and error reporting for troubleshooting
 
 ### Key Benefits
 
-- ✅ **Zero Manual Updates**: Member changes automatically sync from CAPWATCH
-- ✅ **Cost Savings**: Automated license management reduces wasted licenses
-- ✅ **Data Accuracy**: Single source of truth (CAPWATCH) prevents sync issues
-- ✅ **Scalable**: Handles wings of any size with automated batch processing
-- ✅ **Auditable**: Detailed logging tracks all changes for compliance
-- ✅ **No Infrastructure Required**: Runs entirely within Google Apps Script and Drive - no servers or cloud infrastructure needed
+- **Zero Manual Updates**: Member changes automatically sync from CAPWATCH
+- **Cost Savings**: Automated license management reduces wasted licenses
+- **Data Accuracy**: Single source of truth (CAPWATCH) prevents sync issues
+- **Scalable**: Handles wings of any size with automated batch processing
+- **Auditable**: Detailed logging tracks all changes for compliance
+- **No Infrastructure Required**: Runs entirely within Google Apps Script and Drive
 
 ## Table of Contents
 
@@ -48,8 +49,8 @@ This project provides a complete automation solution for Civil Air Patrol (CAP) 
   - Username: Member's CAPID (e.g., 123456@miwg.cap.gov)
   - Email alias: firstname.lastname@miwg.cap.gov
 - Email alias management with automatic conflict resolution
-- Group membership based on member attributes
-- Support for wing-level and group-level distribution lists
+- Wing-level and group-level distribution lists
+- Squadron-level collaborative groups
 - Manual member additions via spreadsheet
 
 ### License Lifecycle Management
@@ -74,42 +75,70 @@ This project provides a complete automation solution for Civil Air Patrol (CAP) 
 
 ## System Architecture
 
+```mermaid
+flowchart TD
+    A[CAPWATCH eServices<br/>Source of Truth] -->|Daily Download<br/>4:00 AM| B[Google Drive<br/>Data Storage]
+    B -->|Member.txt<br/>DutyPosition.txt<br/>Organization.txt| C[Google Apps Script<br/>Processing Engine]
+
+    C -->|Parse & Process| D{Data Processing}
+
+    D -->|Update Members| E[UpdateMembers.gs]
+    D -->|Update Groups| F[UpdateGroups.gs]
+    D -->|Manage Licenses| G[ManageLicenses.gs]
+    D -->|Squadron Groups| H[SquadronGroups.gs]
+
+    E -->|Admin SDK API| I[Google Workspace<br/>Admin SDK]
+    F -->|Groups API| I
+    G -->|Directory API| I
+    H -->|Groups API| I
+
+    I -->|Create/Update| J[Google Workspace Domain]
+
+    J -->|User Accounts| K[Active Members<br/>Organizational Units]
+    J -->|Email Groups| L[Distribution Lists<br/>Wing & Group Level]
+    J -->|Squadron Groups| M[Squadron Collaboration<br/>Public Contact]
+    J -->|Licenses| N[License Management<br/>Archive & Delete]
+
+    style A fill:#003366,color:#fff
+    style J fill:#4285F4,color:#fff
+    style C fill:#34A853,color:#fff
+    style I fill:#FBBC04,color:#000
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    CAPWATCH eServices                   │
-│                    (Source of Truth)                    │
-└────────────────────┬────────────────────────────────────┘
-                     │ Daily Download (4:00 AM)
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              Google Drive Data Storage                  │
-│  • Member.txt           • Organization.txt              │
-│  • DutyPosition.txt     • MbrContact.txt                │
-│  • MbrAchievements.txt  • OrgPaths.txt                  │
-└────────────────────┬────────────────────────────────────┘
-                     │ Parse & Process
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│            Google Apps Script Processing                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │   Update     │  │   Update     │  │   Manage     │   │
-│  │   Members    │  │   Groups     │  │  Licenses    │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└────────────────────┬────────────────────────────────────┘
-                     │ Admin SDK API Calls
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│            Google Workspace Admin SDK                   │
-│  • Directory API    • Groups API                        │
-│  • Users API        • Members API                       │
-└────────────────────┬────────────────────────────────────┘
-                     │ Updates
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              Google Workspace Domain                    │
-│  • User Accounts    • Email Groups                      │
-│  • Organizational Units  • Licenses                     │
-└─────────────────────────────────────────────────────────┘
+
+### Data Flow Overview
+
+```mermaid
+sequenceDiagram
+    participant CW as CAPWATCH eServices
+    participant GD as Google Drive
+    participant GAS as Apps Script
+    participant ADM as Admin SDK
+    participant GW as Google Workspace
+
+    Note over CW,GW: Daily Automation (4:00 AM - 7:00 AM)
+
+    CW->>GD: Download Member Data
+    CW->>GD: Download Organization Data
+    CW->>GD: Download Contact Data
+
+    GD->>GAS: Parse CAPWATCH Files
+    GAS->>GAS: Detect Changes
+    GAS->>GAS: Build Member Objects
+
+    GAS->>ADM: Create/Update Users
+    ADM->>GW: Apply Account Changes
+
+    GAS->>ADM: Update Group Membership
+    ADM->>GW: Apply Group Changes
+
+    GAS->>ADM: Suspend Expired Members
+    ADM->>GW: Update User Status
+
+    Note over GAS,GW: Monthly Automation (15th, 4:00 AM)
+
+    GAS->>ADM: Archive Long-Suspended
+    GAS->>ADM: Delete Long-Archived
+    ADM->>GW: Free Licenses
 ```
 
 ## Prerequisites
@@ -141,6 +170,7 @@ This project provides a complete automation solution for Civil Air Patrol (CAP) 
    - `src/accounts-and-groups/UpdateMembers.gs`
    - `src/accounts-and-groups/UpdateGroups.gs`
    - `src/accounts-and-groups/ManageLicenses.gs`
+   - `src/squadron-groups/SquadronGroups.gs`
 
 **Note**: When you first run any function, Google Apps Script will automatically prompt you to authorize the required permissions.
 
@@ -149,7 +179,7 @@ This project provides a complete automation solution for Civil Air Patrol (CAP) 
 1. Create a **top-level "Automation" folder** in Google Drive
    - This will contain your Apps Script project and configuration spreadsheet
    - Note the folder ID from the URL
-   
+
 2. Create a **"CAPWATCH Data" subfolder** inside the Automation folder
    - This will store downloaded CAPWATCH files
    - Note the folder ID from the URL
@@ -211,19 +241,28 @@ ORGID,OrgUnitPath
 
 Set up your OU structure in Google Workspace Admin Console following the Wing → Group → Squadron hierarchy:
 
-```
-/ (root: miwg.cap.gov)
-└── MI-001 (Wing - Active Members)
-    │
-    ├── MI-700 (Group 700)
-    │   ├── MI-101 (Squadron)
-    │   ├── MI-201 (Squadron)
-    │   └── ...
-    ├── MI-701 (Group 701)
-    │   ├── MI-075 (Squadron)
-    │   ├── MI-165 (Squadron)
-    │   └── ...
-    └── ...
+```mermaid
+graph TD
+    A[Root Domain<br/>miwg.cap.gov] --> B[MI-001<br/>Wing - Active Members]
+
+    B --> C[MI-700<br/>Group 700]
+    B --> D[MI-701<br/>Group 701]
+    B --> E[MI-705<br/>Group 705]
+
+    C --> F[MI-101<br/>Squadron]
+    C --> G[MI-201<br/>Squadron]
+
+    D --> H[MI-075<br/>Squadron]
+    D --> I[MI-165<br/>Squadron]
+
+    E --> J[MI-096<br/>Squadron]
+    E --> K[MI-100<br/>Squadron]
+
+    style A fill:#003366,color:#fff
+    style B fill:#4285F4,color:#fff
+    style C fill:#34A853,color:#fff
+    style D fill:#34A853,color:#fff
+    style E fill:#34A853,color:#fff
 ```
 
 **Note**: Groups are geographic/organizational entities between Wing and Squadron level. This structure allows for group-level email distribution lists.
@@ -240,6 +279,7 @@ Create time-driven triggers for the following functions. **Important**: Due to C
 | `updateEmailGroups()` | Daily | 5:00-6:00 AM | Update group memberships |
 | `updateAdditionalGroupMembers()` | Daily | 6:00-7:00 AM | Add manual members from spreadsheet |
 | `updateMissingAliases()` | Daily | 6:00-7:00 AM | Fix missing email aliases |
+| `updateAllSquadronGroups()` | Daily | 6:00-7:00 AM | Update squadron group membership |
 | `manageLicenseLifecycle()` | Monthly | 15th, 4:00 AM | Archive/delete old accounts |
 
 **Note**: Google Apps Script allows 1-hour scheduling blocks. The script will run sometime within the specified hour.
@@ -306,6 +346,9 @@ updateAllMembers();
 // Update email groups
 updateEmailGroups();
 
+// Update squadron groups
+updateAllSquadronGroups();
+
 // Suspend expired members
 suspendExpiredMembers();
 
@@ -344,13 +387,15 @@ previewLicenseLifecycle();
   - Email group automation
   - License lifecycle management
 
-- **[Recruiting & Retention](src/recruiting-and-retention/README.md)** - R&R workflows (future)
+- **[Squadron Groups](src/squadron-groups/README.md)** - Squadron-level group management
+  - Access groups for shared resources
+  - Public contact emails
+  - Unit distribution lists
 
-- **[Utilities](docs/UTILITIES.md)** - Shared helper functions
-  - File parsing and caching
-  - API retry logic
-  - Data validation
-  - Structured logging
+- **[Recruiting & Retention](src/recruiting-and-retention/README.md)** - R&R workflows
+  - Automated retention emails
+  - Lifecycle notifications
+  - Member engagement tracking
 
 ### Additional Documentation
 
